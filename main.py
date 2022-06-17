@@ -34,7 +34,7 @@ class BookModel(db.Model):
     author = db.Column(db.String(255), nullable=False)
     # reader_pk = db.Column(db.Integer, db.ForeignKey("readers.pk"))
     # reader = db.relationship("ReaderModel")  # !!! flask-alchemy alows instead of creating joins on the fly to get in memory the reader(otherwise we can see only the reder_pk)
-    reader = db.relationship("ReaderModel", secondary=association_table, backref="book")
+    readers = db.relationship("ReaderModel", secondary=association_table, backref="book")
 
     def __repr__(self):
         return f"<{self.pk}> {self.title} from {self.author}"
@@ -56,12 +56,15 @@ class ReaderModel(db.Model):
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+
 class Books(Resource):
 
-    def get(self):
-        books = BookModel.query.all()
-        books_data = [b.as_dict() for b in books]
-        return {"books": books_data}
+    def get(self, book_title):
+        # books = BookModel.query.all()
+        # books_data = [b.as_dict() for b in books]
+        # return {"books": books_data}
+        book = BookModel.query.filter_by(title=book_title).first()
+        return {"readers": [reader.as_dict() for reader in book.readers]}
 
     def post(self):
         data = request.get_json()
@@ -74,9 +77,7 @@ class Books(Resource):
 class Reader(Resource):
     def get(self, reader_pk):
         reader = ReaderModel.query.filter_by(pk=reader_pk).first()
-        books = BookModel.query.filter_by(reader_pk=reader_pk)
-        # books = association_table.`
-        return {"data": [book.as_dict() for book in reader.books]}
+        return {"books": [book.as_dict() for book in reader.books]}
 
     # def post(self):
     #     data = request.get_json()
@@ -86,7 +87,7 @@ class Reader(Resource):
     #     return new_reader.as_dict()
 
 
-api.add_resource(Books, "/")
+api.add_resource(Books, "/books/<string:book_title>/readers")
 api.add_resource(Reader, "/readers/<int:reader_pk>/books")
 
 if __name__ == "__main__":
